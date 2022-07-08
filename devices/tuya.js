@@ -319,13 +319,22 @@ module.exports = [
     },
     {
         fingerprint: [{modelID: 'TS0601', manufacturerName: '_TZE200_bq5c8xfe'},
-            {modelID: 'TS0601', manufacturerName: '_TZE200_bjawzodf'}],
+            {modelID: 'TS0601', manufacturerName: '_TZE200_bjawzodf'},
+            {modelID: 'TS0601', manufacturerName: '_TZE200_qyflbnbj'}],
         model: 'TS0601_temperature_humidity_sensor',
         vendor: 'TuYa',
         description: 'Temperature & humidity sensor',
         fromZigbee: [fz.tuya_temperature_humidity_sensor],
         toZigbee: [],
-        exposes: [e.temperature(), e.humidity(), e.battery()],
+        exposes: (device, options) => {
+            const exps = [e.temperature(), e.humidity(), e.battery()];
+            if (!device || device.manufacturerName === '_TZE200_qyflbnbj') {
+                exps.push(e.battery_low());
+                exps.push(exposes.enum('battery_level', ea.STATE, ['low', 'middle', 'high']).withDescription('Battery level state'));
+            }
+            exps.push(e.linkquality());
+            return exps;
+        },
     },
     {
         fingerprint: [{modelID: 'TS0601', manufacturerName: '_TZE200_vzqtvljm'}],
@@ -338,7 +347,9 @@ module.exports = [
     },
     {
         fingerprint: [{modelID: 'TS0601', manufacturerName: '_TZE200_8ygsuhe1'},
-            {modelID: 'TS0601', manufacturerName: '_TZE200_yvx5lh6k'}, {modelID: 'TS0601', manufacturerName: '_TZE200_ryfmq5rl'}],
+            {modelID: 'TS0601', manufacturerName: '_TZE200_yvx5lh6k'},
+            {modelID: 'TS0601', manufacturerName: '_TZE200_ryfmq5rl'},
+            {modelID: 'TS0601', manufacturerName: '_TZE200_c2fmom5z'}],
         model: 'TS0601_air_quality_sensor',
         vendor: 'TuYa',
         description: 'Air quality sensor',
@@ -429,7 +440,13 @@ module.exports = [
         model: 'ZN231392',
         vendor: 'TuYa',
         description: 'Smart water/gas valve',
-        extend: extend.switch(),
+        fromZigbee: extend.switch().fromZigbee.concat([fz.moes_power_on_behavior]),
+        toZigbee: extend.switch().toZigbee.concat([tz.moes_power_on_behavior]),
+        exposes: extend.switch().exposes.concat([e.power_on_behavior()]),
+        configure: async (device, coordinatorEndpoint, logger) => {
+            const endpoint = device.getEndpoint(1);
+            await endpoint.read('genOnOff', ['onOff', 'moesStartUpOnOff']);
+        },
     },
     {
         fingerprint: [{modelID: 'TS011F', manufacturerName: '_TZ3000_1hwjutgo'}, {modelID: 'TS011F', manufacturerName: '_TZ3000_lnggrqqi'}],
@@ -438,6 +455,14 @@ module.exports = [
         description: 'Circuit breaker',
         extend: extend.switch(),
         whiteLabel: [{vendor: 'Mumubiz', model: 'ZJSB9-80Z'}],
+    },
+    {
+        fingerprint: [{modelID: 'TS011F', manufacturerName: '_TZ3000_8fdayfch'}],
+        model: 'TS011F_relay_switch',
+        vendor: 'TuYa',
+        description: 'Dry contact relay switch',
+        extend: extend.switch(),
+        whiteLabel: [{vendor: 'KTNNKG', model: 'ZB1248-10A'}],
     },
     {
         fingerprint: [{modelID: 'TS0505B', manufacturerName: '_TZ3000_qqjaziws'},
@@ -470,7 +495,6 @@ module.exports = [
             {modelID: 'TS0505B', manufacturerName: '_TZ3210_qxenlrin'},
             {modelID: 'TS0505B', manufacturerName: '_TZ3210_iwbaamgh'},
             {modelID: 'TS0505B', manufacturerName: '_TZ3210_klv2wul0'},
-            {modelID: 'TS0505B', manufacturerName: '_TZ3210_rcggc0ys'},
             {modelID: 'TS0505B', manufacturerName: '_TZ3210_s6zec0of'},
             {modelID: 'TS0505B', manufacturerName: '_TZ3210_y5fjkn7x'},
             {modelID: 'TS0505B', manufacturerName: '_TZ3210_cuqkfz2q'},
@@ -503,6 +527,7 @@ module.exports = [
         fingerprint: [{modelID: 'TS0504B', manufacturerName: '_TZ3000_ukuvyhaa'},
             {modelID: 'TS0504B', manufacturerName: '_TZ3210_bfvybixd'},
             {modelID: 'TS0504B', manufacturerName: '_TZ3210_i2i0bsnv'},
+            {modelID: 'TS0504B', manufacturerName: '_TZ3210_elzv6aia'},
             {modelID: 'TS0504B', manufacturerName: '_TZ3210_1elppmba'}],
         model: 'TS0504B',
         vendor: 'TuYa',
@@ -1564,8 +1589,16 @@ module.exports = [
         fingerprint: [{modelID: 'TS0111', manufacturerName: '_TYZB01_ymcdbl3u'}],
         model: 'TS0111_valve',
         vendor: 'TuYa',
+        whiteLabel: [{vendor: 'TuYa', model: 'SM-AW713Z'}],
         description: 'Smart water/gas valve',
-        extend: extend.switch(),
+        fromZigbee: extend.switch().fromZigbee.concat([fz.moes_power_on_behavior, fz.ts011f_plug_indicator_mode]),
+        toZigbee: extend.switch().toZigbee.concat([tz.moes_power_on_behavior, tz.ts011f_plug_indicator_mode]),
+        exposes: extend.switch().exposes.concat([e.power_on_behavior(),
+            exposes.enum('indicator_mode', ea.ALL, ['off', 'off/on', 'on/off', 'on']).withDescription('LED indicator mode')]),
+        configure: async (device, coordinatorEndpoint, logger) => {
+            const endpoint = device.getEndpoint(1);
+            await endpoint.read('genOnOff', ['onOff', 'moesStartUpOnOff', 'tuyaBacklightMode']);
+        },
     },
     {
         fingerprint: TS011Fplugs.map((manufacturerName) => {
